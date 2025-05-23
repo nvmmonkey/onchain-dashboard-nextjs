@@ -3,6 +3,7 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import { BotStatusProvider } from '@/contexts/BotStatusContext';
 import { ThemeProvider } from '@/contexts/ThemeContext';
+import { ToastProvider } from '@/contexts/ToastContext';
 import BotStatusHeader from '@/components/BotStatusHeader';
 
 const inter = Inter({ subsets: ["latin"] });
@@ -22,10 +23,12 @@ export default function RootLayout({
       <body className={inter.className}>
         <ThemeProvider>
           <BotStatusProvider>
-            <BotStatusHeader />
-            <main className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors">
-              {children}
-            </main>
+            <ToastProvider>
+              <BotStatusHeader />
+              <main className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors">
+                {children}
+              </main>
+            </ToastProvider>
           </BotStatusProvider>
         </ThemeProvider>
       </body>

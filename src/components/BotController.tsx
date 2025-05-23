@@ -15,6 +15,7 @@ import {
   DollarSign,
   GitBranch,
   Database,
+  ExternalLink,
 } from "lucide-react";
 import ConfigEditor from "./ConfigEditor";
 import LogViewer from "./LogViewer";
@@ -23,6 +24,7 @@ import ConnectionStatus from "./ConnectionStatus";
 import DebugPanel from "./DebugPanel";
 import ActionConsole from "./ActionConsole";
 import InteractiveController from "./InteractiveController";
+import TokenStatus from "./TokenStatus";
 import { useBotStatus } from '@/contexts/BotStatusContext';
 import {
   TokenSearchDialog,
@@ -34,6 +36,64 @@ import {
   FlashLoanDialog,
   PoolSettingsDialog,
 } from "./dialogs";
+
+// Pool Logos Component - defined outside to avoid initialization issues
+const PoolLogos = ({ tokenInfo }: { tokenInfo: any }) => {
+  if (!tokenInfo || !tokenInfo.pools) return null;
+
+  // DEX configuration with logos and variant info
+  const dexConfig = [
+    { key: 'raydium', logo: 'https://raydium.io/favicon.ico', isVariant: false },
+    { key: 'raydium-clmm', logo: 'https://raydium.io/favicon.ico', isVariant: true },
+    { key: 'meteora', logo: 'https://pbs.twimg.com/profile_images/1623689233813864450/XDk-DpAP_400x400.jpg', isVariant: false },
+    { key: 'meteora-dlmm', logo: 'https://pbs.twimg.com/profile_images/1623689233813864450/XDk-DpAP_400x400.jpg', isVariant: true },
+    { key: 'orca', logo: 'https://pbs.twimg.com/profile_images/1898099113859678208/1NOETPA8_400x400.png', isVariant: false },
+    { key: 'whirlpool', logo: 'https://pbs.twimg.com/profile_images/1898099113859678208/1NOETPA8_400x400.png', isVariant: true },
+    { key: 'pump', logo: 'https://dd.dexscreener.com/ds-data/dexes/pumpfun.png', isVariant: false },
+    { key: 'pumpswap', logo: 'https://dd.dexscreener.com/ds-data/dexes/pumpfun.png', isVariant: true },
+    { key: 'solfi', logo: 'https://statics.solscan.io/cdn/imgs/s60?ref=68747470733a2f2f737461746963732e736f6c7363616e2e696f2f736f6c7363616e2d696d672f736f6c66695f69636f6e2e6a7067', isVariant: false },
+  ];
+
+  // Count pools by DEX
+  const dexCounts: Record<string, number> = {};
+  dexConfig.forEach(dex => {
+    dexCounts[dex.key] = 0;
+  });
+  
+  // Count actual pools
+  tokenInfo.pools.forEach((pool: any) => {
+    const dexKey = pool.dex.toLowerCase();
+    if (dexKey in dexCounts) {
+      dexCounts[dexKey]++;
+    }
+  });
+
+  return (
+    <div className="flex items-center gap-1 flex-wrap">
+      {dexConfig.map((dex) => {
+        const count = dexCounts[dex.key] || 0;
+        
+        return (
+          <div 
+            key={dex.key} 
+            className="flex items-center gap-0.5" 
+            title={`${dex.key}: ${count} pool${count !== 1 ? 's' : ''}`}
+          >
+            <img 
+              src={dex.logo} 
+              alt={dex.key} 
+              className={`w-3 h-3 rounded-sm ${dex.isVariant ? 'grayscale' : ''}`}
+              onError={(e) => {
+                (e.target as HTMLImageElement).style.display = 'none';
+              }}
+            />
+            <span className="text-[10px] text-gray-600 dark:text-gray-400">{count}</span>
+          </div>
+        );
+      })}
+    </div>
+  );
+};
 
 const menuOptions = [
   {
@@ -130,8 +190,9 @@ export default function BotController() {
   const [isConnected, setIsConnected] = useState(false);
   const [isRunning, setIsRunning] = useState(false);
   const [tokens, setTokens] = useState<string[]>([]);
+  const [tokenInfos, setTokenInfos] = useState<any[]>([]);
   const [activeView, setActiveView] = useState<
-    "controller" | "config" | "logs" | "tmux" | "interactive"
+    "controller" | "config" | "logs" | "tmux" | "interactive" | "tokens"
   >("controller");
   const [showConsole, setShowConsole] = useState(false);
   const [consoleOutput, setConsoleOutput] = useState<string[]>([]);
@@ -181,7 +242,25 @@ export default function BotController() {
       if (response.ok) {
         const data = await response.json();
         if (data.result) {
-          return data.result.split("\n").filter(Boolean);
+          const tokenList = data.result.split("\n").filter(Boolean);
+          
+          // Also try to load token info from cache
+          try {
+            const tokenInfoResponse = await fetch("/api/bot/token-info", {
+              method: "GET",
+            });
+            
+            if (tokenInfoResponse.ok) {
+              const tokenInfoData = await tokenInfoResponse.json();
+              if (tokenInfoData.tokens) {
+                setTokenInfos(tokenInfoData.tokens);
+              }
+            }
+          } catch (error) {
+            console.log("Could not load token info from cache");
+          }
+          
+          return tokenList;
         }
       }
     } catch (error) {
@@ -248,6 +327,21 @@ export default function BotController() {
       window.removeEventListener('botStatusChanged', handleBotStatusChanged as EventListener);
     };
   }, [activeView]);
+
+  // Add formatPrice helper function
+  const formatPrice = (price: string | number): string => {
+    const priceNum = typeof price === 'string' ? parseFloat(price) : price;
+    if (priceNum < 0.00001) {
+      return priceNum.toExponential(2);
+    } else if (priceNum < 0.01) {
+      return priceNum.toFixed(6);
+    } else if (priceNum < 1) {
+      return priceNum.toFixed(4);
+    } else if (priceNum < 100) {
+      return priceNum.toFixed(2);
+    }
+    return priceNum.toFixed(0);
+  };
 
   const addConsoleOutput = (output: string) => {
     setConsoleOutput((prev) => [
@@ -468,14 +562,22 @@ export default function BotController() {
     await executeAction("modify-pools", data);
   };
 
+
+
   return (
     <div className="space-y-6">
-      <div className="mb-4 flex gap-2">
+      <div className="mb-4 flex gap-2 flex-wrap">
         <Button
           variant={activeView === "controller" ? "default" : "outline"}
           onClick={() => setActiveView("controller")}
         >
           Controller
+        </Button>
+        <Button
+          variant={activeView === "tokens" ? "default" : "outline"}
+          onClick={() => setActiveView("tokens")}
+        >
+          Token Status
         </Button>
         <Button
           variant={activeView === "interactive" ? "default" : "outline"}
@@ -524,8 +626,55 @@ export default function BotController() {
                 </div>
                 <div className="flex items-center justify-between">
                   <span>Active Tokens:</span>
-                  <span className="font-bold">{tokens.length}</span>
+                  <span className="font-bold">{tokens.filter(t => t !== 'So11111111111111111111111111111111111111112').length}</span>
                 </div>
+                {tokens.length > 0 && (
+                  <>
+                    {/* Token Grid */}
+                    <div className="grid grid-cols-3 gap-2 max-h-48 overflow-y-auto">
+                      {tokens.filter(token => token !== 'So11111111111111111111111111111111111111112').map((token, index) => {
+                        const tokenInfo = tokenInfos.find(info => info.address === token);
+                        return (
+                          <div key={`${token}-${index}`} className="text-xs border rounded p-2 hover:bg-gray-50 dark:hover:bg-gray-800">
+                            <div className="font-medium truncate">
+                              {tokenInfo ? tokenInfo.symbol : `${token.slice(0, 4)}...${token.slice(-4)}`}
+                            </div>
+                            {tokenInfo && (
+                              <>
+                                <div className="text-gray-500 truncate text-[10px]">
+                                  {tokenInfo.name}
+                                </div>
+                                <div className="text-gray-600 dark:text-gray-400">
+                                  ${formatPrice(tokenInfo.topPool?.priceUsd || tokenInfo.averagePrice)}
+                                </div>
+                                <div className="mt-1 flex items-center gap-1">
+                                  <button
+                                    onClick={() => window.open(`https://solscan.io/token/${token}`, '_blank')}
+                                    className="text-blue-600 hover:text-blue-700 dark:text-blue-400"
+                                    title="View on Solscan"
+                                  >
+                                    <ExternalLink className="h-3 w-3" />
+                                  </button>
+                                  <PoolLogos tokenInfo={tokenInfo} />
+                                </div>
+                              </>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                    <div className="text-sm text-gray-500 mt-2">
+                      <Button
+                        variant="link"
+                        size="sm"
+                        onClick={() => setActiveView("tokens")}
+                        className="p-0 h-auto text-blue-600 hover:text-blue-700"
+                      >
+                        View detailed token information →
+                      </Button>
+                    </div>
+                  </>
+                )}
                 <div className="flex gap-2">
                   {!isRunning ? (
                     <Button
@@ -712,6 +861,11 @@ export default function BotController() {
       )}
 
       {activeView === "interactive" && <InteractiveController />}
+      {activeView === "tokens" && <TokenStatus tokens={tokens} isConnected={isConnected} onRefresh={async () => {
+        const newTokenList = await loadTokens();
+        syncWithContext(isConnected, isRunning, newTokenList);
+        // The loadTokens function already sets tokenInfos, so we don't need to fetch again
+      }} />}
       {activeView === "config" && <ConfigEditor />}
       {activeView === "logs" && <LogViewer isRunning={isRunning} />}
       {activeView === "tmux" && <TmuxController />}

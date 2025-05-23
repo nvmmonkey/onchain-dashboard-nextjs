@@ -123,7 +123,7 @@ export default function BotStatusHeader() {
   const navigateTo = (path: string) => {
     // For now, we'll use the tab switching logic since all views are in one component
     // In the future, these could be separate routes
-    let view: "controller" | "config" | "logs" | "tmux" | "interactive" = "controller";
+    let view: "controller" | "config" | "logs" | "tmux" | "interactive" | "tokens" = "controller";
     
     switch (path) {
       case '/':
@@ -140,6 +140,9 @@ export default function BotStatusHeader() {
         break;
       case '/tmux':
         view = "tmux";
+        break;
+      case '/tokens':
+        view = "tokens";
         break;
     }
     
@@ -193,7 +196,7 @@ export default function BotStatusHeader() {
             <div className="hidden sm:flex items-center gap-4 text-sm text-gray-600 dark:text-gray-400">
               <div className="flex items-center gap-1">
                 <Activity className="h-4 w-4" />
-                <span>{tokenCount} tokens</span>
+                <span>{tokens.filter(t => t !== 'So11111111111111111111111111111111111111112').length} tokens</span>
               </div>
               <div className="flex items-center gap-1">
                 {isConnected ? (
@@ -289,6 +292,10 @@ export default function BotStatusHeader() {
                 <Bot className="h-4 w-4 mr-2" />
                 Bot Controller
               </DropdownItem>
+              <DropdownItem onClick={() => navigateTo('/tokens')}>
+                <Activity className="h-4 w-4 mr-2" />
+                Token Status
+              </DropdownItem>
               <DropdownItem onClick={() => navigateTo('/interactive')}>
                 <Terminal className="h-4 w-4 mr-2" />
                 Interactive Mode
@@ -311,7 +318,7 @@ export default function BotStatusHeader() {
 
           {/* Mobile Stats */}
           <div className="sm:hidden flex items-center gap-2 text-xs text-gray-500">
-            <span>{tokenCount} tokens</span>
+            <span>{tokens.filter(t => t !== 'So11111111111111111111111111111111111111112').length} tokens</span>
             <span>•</span>
             <span>{isConnected ? '🟢' : '🔴'}</span>
           </div>
