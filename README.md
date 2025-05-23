@@ -8,12 +8,7 @@ First, run the development server:
 npm i
 
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+
 ```
 
 ## Install Packge on your VPS
