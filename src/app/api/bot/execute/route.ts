@@ -18,7 +18,13 @@ export async function POST(request: NextRequest) {
     
     // Check if expect is available once at the beginning for interactive commands
     let hasExpect = false;
-    if (['modify-spam', 'modify-jito', 'modify-base-mint', 'modify-merge-mints', 'modify-flash-loan'].includes(action) && inputs) {
+    const interactiveCommands = [
+      'modify-spam', 'modify-jito', 'modify-base-mint', 'modify-merge-mints', 
+      'modify-flash-loan', 'add-custom-lookup-table', 'create-lookup-table', 
+      'extend-lookup-table'
+    ];
+    
+    if (interactiveCommands.includes(action)) {
       const checkExpect = await executeSSHCommand(request, 'which expect');
       hasExpect = checkExpect.result && !checkExpect.error;
       console.log('Expect available:', hasExpect);
@@ -201,7 +207,24 @@ expect eof
         break;
 
       case 'create-lookup-table':
-        command = `${commandPrefix}echo -e "7\\n13" | ${nodePath} new-multi.js 2>&1`;
+        // This command might show a cost warning and ask for confirmation
+        if (hasExpect) {
+          const expectScript = `
+set timeout 5
+spawn ${nodePath} new-multi.js
+expect "Enter your choice"
+send "7\\r"
+expect {
+  "Enter your choice" { send "13\\r" }
+  timeout { send "13\\r" }
+}
+expect eof
+          `.trim();
+          
+          command = `${commandPrefix}expect -c '${expectScript.replace(/\n/g, '; ')}' 2>&1`;
+        } else {
+          command = `${commandPrefix}echo -e "7\\n13" | ${nodePath} new-multi.js 2>&1`;
+        }
         break;
 
       case 'extend-lookup-table':
@@ -216,11 +239,27 @@ expect eof
           });
         }
         
-        inputSequence = [
-          '8', // Menu option 8: Extend lookup table
-          inputs.selection || inputs.address, // Table selection or address
-        ].join('\\n');
-        command = `${commandPrefix}echo -e "${inputSequence}\\n13" | ${nodePath} new-multi.js 2>&1`;
+        if (hasExpect) {
+          const expectScript = `
+set timeout 5
+spawn ${nodePath} new-multi.js
+expect "Enter your choice"
+send "8\\r"
+expect "Select table"
+send "${inputs.selection || inputs.address}\\r"
+expect "Enter your choice"
+send "13\\r"
+expect eof
+          `.trim();
+          
+          command = `${commandPrefix}expect -c '${expectScript.replace(/\n/g, '; ')}' 2>&1`;
+        } else {
+          inputSequence = [
+            '8', // Menu option 8: Extend lookup table
+            inputs.selection || inputs.address, // Table selection or address
+          ].join('\\n');
+          command = `${commandPrefix}echo -e "${inputSequence}\\n13" | ${nodePath} new-multi.js 2>&1`;
+        }
         break;
 
       case 'modify-merge-mints':
@@ -282,11 +321,28 @@ expect eof
           });
         }
         
-        inputSequence = [
-          '12', // Menu option 12: Add Custom Lookup Table
-          inputs.address,
-        ].join('\\n');
-        command = `${commandPrefix}echo -e "${inputSequence}\\n13" | ${nodePath} new-multi.js 2>&1`;
+        if (hasExpect) {
+          // Use expect for proper interactive handling
+          const expectScript = `
+set timeout 5
+spawn ${nodePath} new-multi.js
+expect "Enter your choice"
+send "12\\r"
+expect "Enter lookup table address"
+send "${inputs.address}\\r"
+expect "Enter your choice"
+send "13\\r"
+expect eof
+          `.trim();
+          
+          command = `${commandPrefix}expect -c '${expectScript.replace(/\n/g, '; ')}' 2>&1 && echo "\\n=== Lookup Table Added ===" && grep -A5 "lookup_table_accounts" ${configFile} | head -10`;
+        } else {
+          inputSequence = [
+            '12', // Menu option 12: Add Custom Lookup Table
+            inputs.address,
+          ].join('\\n');
+          command = `${commandPrefix}echo -e "${inputSequence}\\n13" | ${nodePath} new-multi.js 2>&1`;
+        }
         break;
 
       case 'run-bot':
