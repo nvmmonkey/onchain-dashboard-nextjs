@@ -98,6 +98,10 @@ export interface TokenDetailedInfo {
     priceUsd: string;
     volume24h: string;
     liquidity: string;
+    baseTokenReserve?: string;
+    quoteTokenReserve?: string;
+    baseTokenSymbol?: string;
+    quoteTokenSymbol?: string;
   }>;
 }
 
@@ -201,6 +205,7 @@ class GeckoTerminalService {
     const tokenInfo = included.find(
       (item): item is TokenInfo =>
         item.type === 'token' &&
+        'address' in item.attributes &&
         item.attributes.address.toLowerCase() === tokenAddress.toLowerCase()
     );
 
@@ -215,6 +220,9 @@ class GeckoTerminalService {
       const priceUsd = isBaseToken
         ? parseFloat(pool.attributes.base_token_price_usd)
         : parseFloat(pool.attributes.quote_token_price_usd);
+      
+      const baseTokenPriceUsd = parseFloat(pool.attributes.base_token_price_usd);
+      const quoteTokenPriceUsd = parseFloat(pool.attributes.quote_token_price_usd);
       
       const volume24h = parseFloat(pool.attributes.volume_usd.h24 || '0');
       const liquidity = parseFloat(pool.attributes.reserve_in_usd || '0');
@@ -233,6 +241,38 @@ class GeckoTerminalService {
           item.type === 'dex' && item.id === pool.relationships.dex.data.id
       );
 
+      // Find base and quote token info
+      const baseTokenInfo = included.find(
+        (item): item is TokenInfo =>
+          item.type === 'token' && 
+          item.id === pool.relationships.base_token.data.id
+      );
+      
+      const quoteTokenInfo = included.find(
+        (item): item is TokenInfo =>
+          item.type === 'token' && 
+          item.id === pool.relationships.quote_token.data.id
+      );
+
+      // Calculate reserves
+      let baseTokenReserve = 'N/A';
+      let quoteTokenReserve = 'N/A';
+      
+      if (liquidity > 0 && baseTokenPriceUsd > 0 && quoteTokenPriceUsd > 0) {
+        // For AMM pools, liquidity is typically split 50/50 between tokens
+        // This is an approximation since GeckoTerminal doesn't provide exact reserves
+        const baseReserveUsd = liquidity / 2;
+        const quoteReserveUsd = liquidity / 2;
+        
+        // Calculate token amounts
+        const baseReserveAmount = baseReserveUsd / baseTokenPriceUsd;
+        const quoteReserveAmount = quoteReserveUsd / quoteTokenPriceUsd;
+        
+        // Format reserves with appropriate precision
+        baseTokenReserve = this.formatTokenAmount(baseReserveAmount);
+        quoteTokenReserve = this.formatTokenAmount(quoteReserveAmount);
+      }
+
       return {
         address: pool.attributes.address,
         name: pool.attributes.name,
@@ -241,6 +281,10 @@ class GeckoTerminalService {
         volume24h: volume24h.toFixed(2),
         liquidity: liquidity.toFixed(2),
         priceChange24h: pool.attributes.price_change_percentage.h24,
+        baseTokenReserve,
+        quoteTokenReserve,
+        baseTokenSymbol: baseTokenInfo?.attributes.symbol || 'Unknown',
+        quoteTokenSymbol: quoteTokenInfo?.attributes.symbol || 'Unknown',
       };
     });
 
@@ -287,6 +331,17 @@ class GeckoTerminalService {
         delete this.cache[key];
       }
     });
+  }
+
+  // Format token amount with appropriate precision
+  private formatTokenAmount(amount: number): string {
+    if (amount === 0) return '0';
+    if (amount < 0.01) return amount.toExponential(2);
+    if (amount < 1) return amount.toFixed(4);
+    if (amount < 1000) return amount.toFixed(2);
+    if (amount < 1000000) return `${(amount / 1000).toFixed(2)}K`;
+    if (amount < 1000000000) return `${(amount / 1000000).toFixed(2)}M`;
+    return `${(amount / 1000000000).toFixed(2)}B`;
   }
 }
 

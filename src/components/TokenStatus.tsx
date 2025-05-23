@@ -306,7 +306,7 @@ export default function TokenStatus({ tokens, isConnected, onRefresh }: TokenSta
                     <h5 className="font-medium text-sm mb-2">Top Pools</h5>
                     <div className="space-y-1">
                       {tokenInfo.pools.slice(0, 5).map((pool, poolIndex) => (
-                        <div key={`${pool.address}-${poolIndex}`} className="border-b border-gray-100 dark:border-gray-700 last:border-0 pb-1 last:pb-0">
+                        <div key={`${pool.address}-${poolIndex}`} className="border-b border-gray-100 dark:border-gray-700 last:border-0 pb-2 last:pb-0">
                           <div className="flex items-start justify-between text-xs">
                             <div className="flex items-start gap-1 flex-1 min-w-0">
                               <span className="text-gray-500 flex-shrink-0">#{poolIndex + 1}</span>
@@ -333,11 +333,17 @@ export default function TokenStatus({ tokens, isConnected, onRefresh }: TokenSta
                                     <ExternalLink className="h-3 w-3" />
                                   </button>
                                 </div>
+                                {/* Pool reserves */}
+                                <div className="text-[10px] text-gray-500 mt-1" title="Estimated reserves based on liquidity">
+                                  <div>≈ {pool.baseTokenSymbol}: {pool.baseTokenReserve}</div>
+                                  <div>≈ {pool.quoteTokenSymbol}: {pool.quoteTokenReserve}</div>
+                                </div>
                               </div>
                             </div>
                             <div className="flex flex-col items-end ml-2 flex-shrink-0">
                               <span className="font-medium">${formatPrice(pool.priceUsd)}</span>
                               <span className="text-gray-500 text-[10px]">Vol: {formatNumber(parseFloat(pool.volume24h))}</span>
+                              <span className="text-gray-500 text-[10px]">Liq: {formatNumber(parseFloat(pool.liquidity))}</span>
                             </div>
                           </div>
                         </div>
