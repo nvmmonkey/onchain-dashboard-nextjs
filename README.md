@@ -21,6 +21,16 @@ bun dev
 First, run the development server:
 
 ```bash
+#Install NVM
+curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.3/install.sh | bash
+
+#Install node v22 using nvm
+nvm install 22
+
+#Use node V22
+nvm use 22
+
+#install required package
 apt-get update && apt-get install -y expect tmux
 
 ```
