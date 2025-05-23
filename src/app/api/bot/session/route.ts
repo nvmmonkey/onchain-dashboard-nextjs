@@ -129,7 +129,7 @@ export async function POST(request: NextRequest) {
             success: true,
             message: 'Session stopped' 
           });
-        } catch (error) {
+        } catch {
           // Session might already be stopped
           return NextResponse.json({ 
             success: true,

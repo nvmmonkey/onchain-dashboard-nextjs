@@ -15,7 +15,7 @@ import { Switch } from '@/components/ui/switch';
 interface SpamSettingsDialogProps {
   open: boolean;
   onClose: () => void;
-  onSubmit: (data: any) => void;
+  onSubmit: (data: Record<string, unknown>) => void;
 }
 
 export function SpamSettingsDialog({ open, onClose, onSubmit }: SpamSettingsDialogProps) {

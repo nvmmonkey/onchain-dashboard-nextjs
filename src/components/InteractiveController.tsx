@@ -92,7 +92,7 @@ export default function InteractiveController() {
             console.log("Initial read response:", readData);
             
             if (readData.success && readData.output) {
-              const lines = readData.output.split("\n").filter(line => line.trim());
+              const lines = readData.output.split("\n").filter((line: string) => line.trim());
               if (lines.length > 0) {
                 setOutput(lines);
               }
@@ -136,7 +136,7 @@ export default function InteractiveController() {
         body: JSON.stringify({ action: "stop" }),
       });
 
-      const data = await response.json();
+      await response.json();
       setIsSessionActive(false);
       setOutput((prev) => [...prev, "Session stopped."]);
     } catch (error) {
@@ -160,7 +160,7 @@ export default function InteractiveController() {
 
       const data = await response.json();
       if (data.success && data.output) {
-        const lines = data.output.split("\n").filter(line => line.trim());
+        const lines = data.output.split("\n").filter((line: string) => line.trim());
         setOutput(lines);
       }
 
@@ -195,7 +195,7 @@ export default function InteractiveController() {
       console.log("Read output response:", data);
       
       if (data.success && data.output) {
-        const lines = data.output.split("\n").filter(line => line.trim());
+        const lines = data.output.split("\n").filter((line: string) => line.trim());
         console.log("Parsed lines:", lines.length);
         if (lines.length > 0) {
           setOutput(lines);
@@ -229,29 +229,31 @@ export default function InteractiveController() {
           <div className="flex gap-2">
             {!isSessionActive ? (
               <>
-                <Button onClick={startSession} disabled={isLoading} size="sm">
+                <Button onClick={() => { startSession(); }} disabled={isLoading} size="sm">
                   <Power className="h-4 w-4 mr-2" />
                   Start Session
                 </Button>
                 <Button 
-                  onClick={async () => {
-                    console.log("Testing SSH connection...");
-                    try {
-                      const response = await fetch("/api/ssh", {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({ 
-                          action: "execute", 
-                          command: "echo 'SSH connection test successful'" 
-                        }),
-                      });
-                      const data = await response.json();
-                      console.log("SSH test result:", data);
-                      setOutput([`SSH Test: ${data.result || data.error || 'No response'}`]);
-                    } catch (error) {
-                      console.error("SSH test error:", error);
-                      setOutput([`SSH Test Error: ${error}`]);
-                    }
+                  onClick={() => {
+                    (async () => {
+                      console.log("Testing SSH connection...");
+                      try {
+                        const response = await fetch("/api/ssh", {
+                          method: "POST",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({ 
+                            action: "execute", 
+                            command: "echo 'SSH connection test successful'" 
+                          }),
+                        });
+                        const data = await response.json();
+                        console.log("SSH test result:", data);
+                        setOutput([`SSH Test: ${data.result || data.error || 'No response'}`]);
+                      } catch (error) {
+                        console.error("SSH test error:", error);
+                        setOutput([`SSH Test Error: ${error}`]);
+                      }
+                    })();
                   }}
                   variant="outline" 
                   size="sm"
@@ -263,7 +265,7 @@ export default function InteractiveController() {
             ) : (
               <>
                 <Button
-                  onClick={readOutput}
+                  onClick={() => { readOutput(); }}
                   variant="outline"
                   size="sm"
                   disabled={isLoading}
@@ -271,7 +273,7 @@ export default function InteractiveController() {
                   <RefreshCw className="h-4 w-4" />
                 </Button>
                 <Button
-                  onClick={stopSession}
+                  onClick={() => { stopSession(); }}
                   variant="destructive"
                   size="sm"
                   disabled={isLoading}
@@ -335,12 +337,12 @@ export default function InteractiveController() {
                 <Input
                   value={command}
                   onChange={(e) => setCommand(e.target.value)}
-                  onKeyPress={(e) => e.key === "Enter" && sendCommand()}
+                  onKeyPress={(e) => { if (e.key === "Enter") sendCommand(); }}
                   placeholder="Enter command..."
                   disabled={!isSessionActive || isLoading}
                 />
                 <Button
-                  onClick={sendCommand}
+                  onClick={() => { sendCommand(); }}
                   disabled={!isSessionActive || isLoading}
                 >
                   <Send className="h-4 w-4" />

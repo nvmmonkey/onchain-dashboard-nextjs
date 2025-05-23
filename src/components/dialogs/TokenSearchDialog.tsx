@@ -18,7 +18,7 @@ import { Switch } from '@/components/ui/switch';
 interface TokenSearchDialogProps {
   open: boolean;
   onClose: () => void;
-  onSubmit: (data: any) => void;
+  onSubmit: (data: Record<string, unknown>) => void;
 }
 
 export function TokenSearchDialog({ open, onClose, onSubmit }: TokenSearchDialogProps) {

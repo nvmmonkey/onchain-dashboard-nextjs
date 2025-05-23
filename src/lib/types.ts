@@ -57,7 +57,7 @@ export interface BotConfig {
     compute_unit_limit: number;
     merge_mints: boolean;
   };
-  wallet: any;
+  wallet: Record<string, unknown>;
 }
 
 export interface Token {

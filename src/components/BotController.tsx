@@ -1,23 +1,20 @@
 // src/components/BotController.tsx - Complete implementation
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
   Play,
   Square,
   RefreshCw,
-  Settings,
   Plus,
-  Trash2,
   Edit,
   Shield,
   Zap,
   DollarSign,
   GitBranch,
   Database,
-  Terminal,
 } from "lucide-react";
 import ConfigEditor from "./ConfigEditor";
 import LogViewer from "./LogViewer";
@@ -118,11 +115,39 @@ export default function BotController() {
   const [showFlashLoanDialog, setShowFlashLoanDialog] = useState(false);
   const [showPoolDialog, setShowPoolDialog] = useState(false);
 
-  useEffect(() => {
-    checkConnection();
+  const checkBotStatus = useCallback(async () => {
+    try {
+      const response = await fetch("/api/bot/check-session", {
+        method: "POST",
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setIsRunning(data.exists);
+      }
+    } catch (error) {
+      console.error("Error checking bot status:", error);
+    }
   }, []);
 
-  const checkConnection = async () => {
+  const loadTokens = useCallback(async () => {
+    try {
+      const response = await fetch("/api/bot/get-tokens", {
+        method: "POST",
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.result) {
+          setTokens(data.result.split("\n").filter(Boolean));
+        }
+      }
+    } catch (error) {
+      console.error("Error loading tokens:", error);
+    }
+  }, []);
+
+  const checkConnection = useCallback(async () => {
     try {
       const response = await fetch("/api/ssh", {
         method: "POST",
@@ -138,39 +163,11 @@ export default function BotController() {
     } catch (error) {
       console.error("Connection error:", error);
     }
-  };
+  }, [loadTokens, checkBotStatus]);
 
-  const checkBotStatus = async () => {
-    try {
-      const response = await fetch("/api/bot/check-session", {
-        method: "POST",
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setIsRunning(data.exists);
-      }
-    } catch (error) {
-      console.error("Error checking bot status:", error);
-    }
-  };
-
-  const loadTokens = async () => {
-    try {
-      const response = await fetch("/api/bot/get-tokens", {
-        method: "POST",
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        if (data.result) {
-          setTokens(data.result.split("\n").filter(Boolean));
-        }
-      }
-    } catch (error) {
-      console.error("Error loading tokens:", error);
-    }
-  };
+  useEffect(() => {
+    checkConnection();
+  }, [checkConnection]);
 
   const addConsoleOutput = (output: string) => {
     setConsoleOutput((prev) => [
@@ -183,7 +180,7 @@ export default function BotController() {
     setConsoleOutput([]);
   };
 
-  const executeAction = async (action: string, inputs?: any) => {
+  const executeAction = async (action: string, inputs?: Record<string, unknown>) => {
     try {
       addConsoleOutput(`Executing: ${action}`);
 
@@ -203,7 +200,7 @@ export default function BotController() {
       if (data.result) {
         // Split output by lines and add each non-empty line
         const lines = data.result.split("\n");
-        lines.forEach((line) => {
+        lines.forEach((line: string) => {
           if (line.trim()) {
             addConsoleOutput(line);
           }
@@ -285,7 +282,7 @@ export default function BotController() {
 
       case "modify-pools":
         addConsoleOutput("Fetching current pool settings...");
-        const poolResult = await executeAction(action);
+        await executeAction(action);
         // Show the dialog after displaying current settings
         setTimeout(() => {
           setShowPoolDialog(true);
@@ -324,41 +321,41 @@ export default function BotController() {
   };
 
   // Dialog submit handlers
-  const handleTokenSearchSubmit = async (data: any) => {
+  const handleTokenSearchSubmit = async (data: Record<string, unknown>) => {
     await executeAction("search-token", data);
   };
 
-  const handleModifyConfigSubmit = async (data: any) => {
+  const handleModifyConfigSubmit = async (data: Record<string, unknown>) => {
     addConsoleOutput(`Deleting token at index: ${data.deleteIndex}`);
     await executeAction("modify-config", data);
     await loadTokens(); // Refresh token list after deletion
   };
 
-  const handleSpamSubmit = async (data: any) => {
+  const handleSpamSubmit = async (data: Record<string, unknown>) => {
     addConsoleOutput(`Modifying spam settings...`);
     addConsoleOutput(`Enable: ${data.enabled}, Option: ${data.option || 'N/A'}`);
     await executeAction("modify-spam", data);
   };
 
-  const handleJitoSubmit = async (data: any) => {
+  const handleJitoSubmit = async (data: Record<string, unknown>) => {
     addConsoleOutput(`Modifying Jito settings...`);
     addConsoleOutput(`Choice: ${data.choice}, Enabled: ${data.enabled || 'N/A'}, Min Profit: ${data.minProfit || 'N/A'}, Tip Option: ${data.tipOption || 'N/A'}`);
     await executeAction("modify-jito", data);
   };
 
-  const handleBaseMintSubmit = async (data: any) => {
+  const handleBaseMintSubmit = async (data: Record<string, unknown>) => {
     await executeAction("modify-base-mint", data);
   };
 
-  const handleMergeMintSubmit = async (data: any) => {
+  const handleMergeMintSubmit = async (data: Record<string, unknown>) => {
     await executeAction("modify-merge-mints", data);
   };
 
-  const handleFlashLoanSubmit = async (data: any) => {
+  const handleFlashLoanSubmit = async (data: Record<string, unknown>) => {
     await executeAction("modify-flash-loan", data);
   };
 
-  const handlePoolSettingsSubmit = async (data: any) => {
+  const handlePoolSettingsSubmit = async (data: Record<string, unknown>) => {
     await executeAction("modify-pools", data);
   };
 

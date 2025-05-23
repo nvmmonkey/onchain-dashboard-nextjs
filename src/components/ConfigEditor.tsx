@@ -34,7 +34,7 @@ export default function ConfigEditor() {
       } else {
         setError("Failed to load configuration");
       }
-    } catch (error) {
+    } catch {
       setError("Error loading configuration");
     } finally {
       setIsLoading(false);

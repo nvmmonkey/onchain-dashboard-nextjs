@@ -26,7 +26,7 @@ export async function GET(request: NextRequest) {
             const data = await response.json();
             if (data.result) {
               const newLines = data.result.split("\n").filter(Boolean);
-              newLines.forEach((line) => sendLog(line));
+              newLines.forEach((line: string) => sendLog(line));
             }
           }
         } catch (error) {

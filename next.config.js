@@ -1,9 +1,9 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  reactStrictMode: true,
+  reactStrictMode: false,
 
   // Webpack configuration for SSH2 and other node modules
-  webpack: (config, { isServer }) => {
+  webpack: (config, { isServer, webpack }) => {
     if (!isServer) {
       // Don't resolve node modules on the client-side
       config.resolve.fallback = {
@@ -17,12 +17,23 @@ const nextConfig = {
         util: false,
         path: false,
         os: false,
-        // turbopack: true,
+        ssh2: false,
       };
     }
+    
+    // Ignore .node binary modules
+    config.plugins.push(
+      new webpack.IgnorePlugin({
+        resourceRegExp: /\.node$/,
+        contextRegExp: /ssh2/,
+      })
+    );
 
     return config;
   },
+  
+  // Mark ssh2 as external package for server components
+  serverExternalPackages: ['ssh2'],
 };
 
 module.exports = nextConfig;

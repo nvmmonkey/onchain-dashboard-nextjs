@@ -9,7 +9,7 @@ export async function POST(request: NextRequest) {
     switch (action) {
       case 'run-bot':
         const runCommand = `cd ${botPath} && tmux kill-session -t solana-bot 2>/dev/null; tmux new-session -d -s solana-bot './smb-onchain run ${configFile} 2>&1'`;
-        const runResponse = await executeCommand(request, runCommand);
+        await executeCommand(request, runCommand);
         return NextResponse.json({ 
           result: 'Bot started in tmux session "solana-bot"',
           message: 'Switch to Logs tab to view output'

@@ -14,11 +14,11 @@ import { Input } from '@/components/ui/input';
 interface PoolSettingsDialogProps {
   open: boolean;
   onClose: () => void;
-  onSubmit: (data: any) => void;
-  currentSettings?: any;
+  onSubmit: (data: Record<string, unknown>) => void;
+  currentSettings?: Record<string, unknown>;
 }
 
-export function PoolSettingsDialog({ open, onClose, onSubmit, currentSettings }: PoolSettingsDialogProps) {
+export function PoolSettingsDialog({ open, onClose, onSubmit }: PoolSettingsDialogProps) {
   const [maxPools, setMaxPools] = useState('2');
   const [pumpPools, setPumpPools] = useState('1');
   const [meteoraPools, setMeteoraPools] = useState('1');

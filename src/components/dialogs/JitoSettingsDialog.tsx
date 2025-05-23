@@ -16,7 +16,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 interface JitoSettingsDialogProps {
   open: boolean;
   onClose: () => void;
-  onSubmit: (data: any) => void;
+  onSubmit: (data: Record<string, unknown>) => void;
 }
 
 export function JitoSettingsDialog({ open, onClose, onSubmit }: JitoSettingsDialogProps) {
@@ -26,7 +26,7 @@ export function JitoSettingsDialog({ open, onClose, onSubmit }: JitoSettingsDial
   const [tipOption, setTipOption] = useState('2');
 
   const handleSubmit = () => {
-    const data: any = {};
+    const data: Record<string, unknown> = {};
     
     if (activeTab === 'enable') {
       data.choice = '1';

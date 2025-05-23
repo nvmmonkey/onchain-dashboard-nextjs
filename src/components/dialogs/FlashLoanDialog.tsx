@@ -15,7 +15,7 @@ import { AlertTriangle } from 'lucide-react';
 interface FlashLoanDialogProps {
   open: boolean;
   onClose: () => void;
-  onSubmit: (data: any) => void;
+  onSubmit: (data: Record<string, unknown>) => void;
 }
 
 export function FlashLoanDialog({ open, onClose, onSubmit }: FlashLoanDialogProps) {

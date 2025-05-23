@@ -15,7 +15,7 @@ import { Input } from '@/components/ui/input';
 interface BaseMintDialogProps {
   open: boolean;
   onClose: () => void;
-  onSubmit: (data: any) => void;
+  onSubmit: (data: Record<string, unknown>) => void;
 }
 
 export function BaseMintDialog({ open, onClose, onSubmit }: BaseMintDialogProps) {

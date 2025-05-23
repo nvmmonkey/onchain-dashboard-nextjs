@@ -14,7 +14,7 @@ import { Input } from "@/components/ui/input";
 interface LookupTableDialogProps {
   open: boolean;
   onClose: () => void;
-  onSubmit: (data: any) => void;
+  onSubmit: (data: Record<string, unknown>) => void;
   action: "extend" | "add";
   existingTables?: string[];
 }

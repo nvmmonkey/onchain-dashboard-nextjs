@@ -4,14 +4,13 @@ export async function POST(request: NextRequest) {
   try {
     const { action, inputs } = await request.json();
     const botPath = process.env.BOT_FOLDER_PATH;
-    const configFile = process.env.CONFIG_FILE_NAME;
 
     let command = '';
     
     switch (action) {
       case 'search-token':
         // Build the input sequence for the Node.js script
-        const { tokenAddress, baseToken, jitoEnabled, spamEnabled } = inputs;
+        const { tokenAddress, jitoEnabled, spamEnabled } = inputs;
         const inputSequence = [
           '1', // Search and update
           tokenAddress,

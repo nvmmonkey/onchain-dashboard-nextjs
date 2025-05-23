@@ -2,15 +2,18 @@ import { NextRequest, NextResponse } from 'next/server';
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { action: string } }
+  { params }: { params: Promise<{ action: string }> }
 ) {
   try {
     const botPath = process.env.BOT_FOLDER_PATH;
     const configFile = process.env.CONFIG_FILE_NAME;
     
+    // Await the params object before accessing its properties
+    const { action } = await params;
+    
     let command = '';
     
-    switch (params.action) {
+    switch (action) {
       case 'run-bot':
         // Kill existing session first, then create new one
         command = `tmux kill-session -t solana-bot 2>/dev/null; cd ${botPath} && tmux new-session -d -s solana-bot -c ${botPath} './smb-onchain run ${configFile} 2>&1'`;
