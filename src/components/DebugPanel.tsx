@@ -223,7 +223,7 @@ export default function DebugPanel() {
           </div>
 
           {debugInfo.length > 0 && (
-            <div className="bg-gray-900 text-gray-100 p-4 rounded-lg font-mono text-sm overflow-x-auto">
+            <div className="bg-gray-900 dark:bg-gray-950 text-gray-100 dark:text-gray-200 p-4 rounded-lg font-mono text-sm overflow-x-auto border border-gray-700 dark:border-gray-600">
               {debugInfo.map((info, index) => (
                 <div key={index} className="whitespace-pre-wrap">
                   {info}
@@ -232,7 +232,7 @@ export default function DebugPanel() {
             </div>
           )}
 
-          <div className="text-sm text-gray-600 space-y-1">
+          <div className="text-sm text-gray-600 dark:text-gray-400 space-y-1">
             <p className="font-semibold">Common Issues:</p>
             <ul className="list-disc list-inside space-y-1">
               <li>Bot not running in tmux session named 'solana-bot'</li>

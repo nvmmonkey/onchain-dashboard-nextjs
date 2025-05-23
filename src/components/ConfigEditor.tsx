@@ -107,7 +107,7 @@ export default function ConfigEditor() {
       </CardHeader>
       <CardContent>
         {error && (
-          <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded">
+          <div className="mb-4 p-3 bg-red-100 dark:bg-red-900/20 border border-red-400 dark:border-red-600 text-red-700 dark:text-red-400 rounded">
             {error}
           </div>
         )}
@@ -121,13 +121,13 @@ export default function ConfigEditor() {
             placeholder="Loading configuration..."
           />
           {hasChanges && (
-            <div className="absolute top-2 right-2 bg-yellow-100 text-yellow-800 px-2 py-1 rounded text-xs">
+            <div className="absolute top-2 right-2 bg-yellow-100 dark:bg-yellow-900/20 text-yellow-800 dark:text-yellow-400 px-2 py-1 rounded text-xs">
               Unsaved changes
             </div>
           )}
         </div>
 
-        <div className="mt-4 text-sm text-gray-600">
+        <div className="mt-4 text-sm text-gray-600 dark:text-gray-400">
           <p>Tips:</p>
           <ul className="list-disc list-inside mt-1">
             <li>Use Ctrl+S to save (when focused on editor)</li>

@@ -15,6 +15,14 @@ export async function POST(request: NextRequest) {
           message: 'Switch to Logs tab to view output'
         });
 
+      case 'stop-bot':
+        const stopCommand = `tmux kill-session -t solana-bot`;
+        await executeCommand(request, stopCommand);
+        return NextResponse.json({ 
+          result: 'Bot stopped',
+          message: 'Bot session terminated'
+        });
+
       case 'create-lookup-table':
         const createCommand = `cd ${botPath} && ./smb-onchain create-lookup-table ${configFile}`;
         const createResponse = await executeCommand(request, createCommand);

@@ -2,8 +2,8 @@ import BotController from "@/components/BotController";
 
 export default function Home() {
   return (
-    <main className="min-h-screen bg-gray-700 ">
+    <div className="container mx-auto p-4 dark:text-gray-100">
       <BotController />
-    </main>
+    </div>
   );
 }

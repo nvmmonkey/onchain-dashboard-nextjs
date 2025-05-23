@@ -23,6 +23,7 @@ import ConnectionStatus from "./ConnectionStatus";
 import DebugPanel from "./DebugPanel";
 import ActionConsole from "./ActionConsole";
 import InteractiveController from "./InteractiveController";
+import { useBotStatus } from '@/contexts/BotStatusContext';
 import {
   TokenSearchDialog,
   ModifyConfigDialog,
@@ -37,64 +38,95 @@ import {
 const menuOptions = [
   {
     id: 1,
-    label: "Search and update (add tokens)",
+    label: "Add New Token",
+    description: "Search and add tokens for arbitrage trading",
     action: "search-token",
     icon: Plus,
   },
   {
     id: 2,
-    label: "Modify the config (view/delete tokens)",
+    label: "Manage Tokens",
+    description: "View and delete existing tokens",
     action: "modify-config",
     icon: Edit,
   },
-  { id: 3, label: "Modify Spam settings", action: "modify-spam", icon: Shield },
-  { id: 4, label: "Modify Jito settings", action: "modify-jito", icon: Zap },
-  {
-    id: 5,
-    label: "Modify DEX pool quantities",
-    action: "modify-pools",
-    icon: GitBranch,
+  { 
+    id: 3, 
+    label: "Run Bot", 
+    description: "Start the arbitrage bot",
+    action: "run-bot", 
+    icon: Play 
+  },
+  { 
+    id: 4, 
+    label: "Spam Protection", 
+    description: "Configure transaction spam settings",
+    action: "modify-spam", 
+    icon: Shield 
+  },
+  { 
+    id: 5, 
+    label: "Jito MEV Settings", 
+    description: "Configure MEV bundle and tip settings",
+    action: "modify-jito", 
+    icon: Zap 
   },
   {
     id: 6,
-    label: "Modify Base Mint",
+    label: "Base Currency",
+    description: "Switch between SOL and USDC",
     action: "modify-base-mint",
     icon: DollarSign,
   },
   {
     id: 7,
-    label: "Create new lookup table",
-    action: "create-lookup-table",
-    icon: Database,
-  },
-  {
-    id: 8,
-    label: "Extend existing lookup table",
-    action: "extend-lookup-table",
-    icon: Database,
-  },
-  { id: 9, label: "Run the bot", action: "run-bot", icon: Play },
-  {
-    id: 10,
-    label: "Modify Merge Mints setting",
+    label: "Multi-Token Mode",
+    description: "Enable/disable trading multiple tokens",
     action: "modify-merge-mints",
     icon: GitBranch,
   },
   {
+    id: 8,
+    label: "DEX Pool Config",
+    description: "Set pool quantities per DEX",
+    action: "modify-pools",
+    icon: GitBranch,
+  },
+  {
+    id: 9,
+    label: "Create Lookup Table",
+    description: "Create new LUT for optimization",
+    action: "create-lookup-table",
+    icon: Database,
+  },
+  {
+    id: 10,
+    label: "Extend Lookup Table",
+    description: "Add addresses to existing LUT",
+    action: "extend-lookup-table",
+    icon: Database,
+  },
+  {
     id: 11,
-    label: "Modify Flash Loan settings",
+    label: "Flash Loan Settings",
+    description: "Configure Kamino flash loans",
     action: "modify-flash-loan",
     icon: Zap,
   },
   {
     id: 12,
-    label: "Add Custom Lookup Table",
+    label: "Add Custom LUT",
+    description: "Add custom lookup table address",
     action: "add-custom-lookup-table",
     icon: Database,
   },
 ];
 
 export default function BotController() {
+  // Use shared context state for the header
+  const { updateStatus } = useBotStatus();
+  
+  // Keep local state for the component's internal logic
   const [isConnected, setIsConnected] = useState(false);
   const [isRunning, setIsRunning] = useState(false);
   const [tokens, setTokens] = useState<string[]>([]);
@@ -115,6 +147,15 @@ export default function BotController() {
   const [showFlashLoanDialog, setShowFlashLoanDialog] = useState(false);
   const [showPoolDialog, setShowPoolDialog] = useState(false);
 
+  // Sync local state with global context
+  const syncWithContext = useCallback((connected: boolean, running: boolean, tokenList: string[]) => {
+    setIsConnected(connected);
+    setIsRunning(running);
+    setTokens(tokenList);
+    // Update the global context for the header
+    updateStatus(connected, running, tokenList);
+  }, [updateStatus]);
+
   const checkBotStatus = useCallback(async () => {
     try {
       const response = await fetch("/api/bot/check-session", {
@@ -123,11 +164,12 @@ export default function BotController() {
 
       if (response.ok) {
         const data = await response.json();
-        setIsRunning(data.exists);
+        return data.exists;
       }
     } catch (error) {
       console.error("Error checking bot status:", error);
     }
+    return false;
   }, []);
 
   const loadTokens = useCallback(async () => {
@@ -139,12 +181,13 @@ export default function BotController() {
       if (response.ok) {
         const data = await response.json();
         if (data.result) {
-          setTokens(data.result.split("\n").filter(Boolean));
+          return data.result.split("\n").filter(Boolean);
         }
       }
     } catch (error) {
       console.error("Error loading tokens:", error);
     }
+    return [];
   }, []);
 
   const checkConnection = useCallback(async () => {
@@ -156,18 +199,55 @@ export default function BotController() {
       });
 
       if (response.ok) {
-        setIsConnected(true);
-        loadTokens();
-        checkBotStatus();
+        const [running, tokenList] = await Promise.all([
+          checkBotStatus(),
+          loadTokens(),
+        ]);
+        // Sync all states at once
+        console.log('BotController: Connection successful, syncing with context:', { connected: true, running, tokenCount: tokenList.length });
+        syncWithContext(true, running, tokenList);
+      } else {
+        console.log('BotController: Connection failed, syncing with context');
+        syncWithContext(false, false, []);
       }
     } catch (error) {
       console.error("Connection error:", error);
+      syncWithContext(false, false, []);
     }
-  }, [loadTokens, checkBotStatus]);
+  }, [checkBotStatus, loadTokens, syncWithContext]);
 
   useEffect(() => {
     checkConnection();
   }, [checkConnection]);
+
+  // Listen for navigation events from the header
+  useEffect(() => {
+    const handleNavigate = (event: CustomEvent) => {
+      setActiveView(event.detail.view);
+    };
+
+    const handleBotStatusChanged = (event: CustomEvent) => {
+      console.log('BotController: Received status change from header:', event.detail);
+      const { connected, running, tokenList } = event.detail;
+      setIsConnected(connected);
+      setIsRunning(running);
+      setTokens(tokenList);
+      
+      // If bot just started and we're not on logs view, switch to it
+      if (running && activeView !== "logs") {
+        console.log('BotController: Bot started, switching to logs view');
+        setActiveView("logs");
+      }
+    };
+
+    window.addEventListener('navigate', handleNavigate as EventListener);
+    window.addEventListener('botStatusChanged', handleBotStatusChanged as EventListener);
+    
+    return () => {
+      window.removeEventListener('navigate', handleNavigate as EventListener);
+      window.removeEventListener('botStatusChanged', handleBotStatusChanged as EventListener);
+    };
+  }, [activeView]);
 
   const addConsoleOutput = (output: string) => {
     setConsoleOutput((prev) => [
@@ -182,6 +262,10 @@ export default function BotController() {
 
   const executeAction = async (action: string, inputs?: Record<string, unknown>) => {
     try {
+      console.log(`[DEBUG] executeAction called:`);
+      console.log(`  - action: '${action}'`);
+      console.log(`  - inputs:`, inputs);
+      console.log(`BotController: Executing action: ${action}`);
       addConsoleOutput(`Executing: ${action}`);
 
       const response = await fetch("/api/bot/execute", {
@@ -191,6 +275,7 @@ export default function BotController() {
       });
 
       const data = await response.json();
+      console.log(`BotController: Response for ${action}:`, data);
 
       if (data.error) {
         addConsoleOutput(`❌ Error: ${data.error}`);
@@ -219,14 +304,27 @@ export default function BotController() {
 
       // Refresh data after certain actions
       if (["search-token", "modify-config"].includes(action)) {
-        await loadTokens();
+        console.log(`BotController: Refreshing tokens after ${action}`);
+        const newTokenList = await loadTokens();
+        console.log('BotController: Tokens refreshed, syncing with context:', { tokenCount: newTokenList.length });
+        // Update local state
+        setTokens(newTokenList);
+        // Sync with context
+        updateStatus(isConnected, isRunning, newTokenList);
       }
 
       if (action === "run-bot") {
+        console.log('BotController: Setting running to true after run-bot action');
         setIsRunning(true);
-        setTimeout(() => setActiveView("logs"), 2000);
+        // Immediately update context with new status
+        updateStatus(isConnected, true, tokens);
+        // Switch to logs view immediately so LogViewer can start streaming
+        setActiveView("logs");
       } else if (action === "stop-bot") {
+        console.log('BotController: Setting running to false after stop-bot action');
         setIsRunning(false);
+        // Immediately update context with new status
+        updateStatus(isConnected, false, tokens);
       }
 
       addConsoleOutput("✅ Action completed");
@@ -238,6 +336,7 @@ export default function BotController() {
   };
 
   const handleMenuAction = async (action: string) => {
+    console.log(`[DEBUG] handleMenuAction called with action: '${action}'`);
     setCurrentAction(action);
     setShowConsole(true);
     clearConsole();
@@ -250,7 +349,10 @@ export default function BotController() {
 
       case "modify-config":
         // Load tokens first
-        await loadTokens();
+        console.log('BotController: Loading tokens for modify-config');
+        const tokenList = await loadTokens();
+        console.log('BotController: Tokens loaded, syncing with context:', { tokenCount: tokenList.length });
+        syncWithContext(isConnected, isRunning, tokenList);
         setShowConfigDialog(true);
         break;
 
@@ -277,6 +379,7 @@ export default function BotController() {
       case "run-bot":
       case "stop-bot":
       case "create-lookup-table":
+        console.log(`[DEBUG] Direct execution for action: '${action}'`);
         await executeAction(action);
         break;
 
@@ -310,6 +413,7 @@ export default function BotController() {
         break;
 
       default:
+        console.log(`[DEBUG] Unknown action: '${action}'`);
         addConsoleOutput(`Action ${action} not implemented yet`);
     }
   };
@@ -328,7 +432,12 @@ export default function BotController() {
   const handleModifyConfigSubmit = async (data: Record<string, unknown>) => {
     addConsoleOutput(`Deleting token at index: ${data.deleteIndex}`);
     await executeAction("modify-config", data);
-    await loadTokens(); // Refresh token list after deletion
+    // Refresh token list after deletion and sync with context
+    console.log('BotController: Refreshing tokens after deletion');
+    const newTokenList = await loadTokens();
+    console.log('BotController: Tokens refreshed after deletion, syncing:', { tokenCount: newTokenList.length });
+    setTokens(newTokenList);
+    updateStatus(isConnected, isRunning, newTokenList);
   };
 
   const handleSpamSubmit = async (data: Record<string, unknown>) => {
@@ -360,14 +469,7 @@ export default function BotController() {
   };
 
   return (
-    <div className="container mx-auto p-4">
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold mb-2">
-          Solana Arbitrage Bot Controller
-        </h1>
-        <ConnectionStatus isConnected={isConnected} />
-      </div>
-
+    <div className="space-y-6">
       <div className="mb-4 flex gap-2">
         <Button
           variant={activeView === "controller" ? "default" : "outline"}
@@ -443,9 +545,14 @@ export default function BotController() {
                     </Button>
                   )}
                   <Button
-                    onClick={() => {
-                      loadTokens();
-                      checkBotStatus();
+                    onClick={async () => {
+                      console.log('BotController: Manual refresh triggered');
+                      const [running, tokenList] = await Promise.all([
+                        checkBotStatus(),
+                        loadTokens(),
+                      ]);
+                      console.log('BotController: Manual refresh completed, syncing:', { connected: isConnected, running, tokenCount: tokenList.length });
+                      syncWithContext(isConnected, running, tokenList);
                     }}
                     variant="outline"
                     disabled={!isConnected}
@@ -463,24 +570,94 @@ export default function BotController() {
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-2 gap-2">
-                {menuOptions.slice(0, 8).map((option) => {
-                  const Icon = option.icon;
-                  return (
-                    <Button
-                      key={option.id}
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleMenuAction(option.action)}
-                      disabled={!isConnected}
-                      className="justify-start"
-                    >
-                      {Icon && <Icon className="mr-2 h-4 w-4" />}
-                      <span className="text-xs">
-                        {option.label.split(" ")[0]}
-                      </span>
-                    </Button>
-                  );
-                })}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleMenuAction("search-token")}
+                  disabled={!isConnected}
+                  className="justify-start"
+                  title="Add new tokens"
+                >
+                  <Plus className="mr-2 h-4 w-4" />
+                  <span className="text-xs">Add Token</span>
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleMenuAction("modify-config")}
+                  disabled={!isConnected}
+                  className="justify-start"
+                  title="View & delete tokens"
+                >
+                  <Edit className="mr-2 h-4 w-4" />
+                  <span className="text-xs">Manage</span>
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleMenuAction("modify-spam")}
+                  disabled={!isConnected}
+                  className="justify-start"
+                  title="Spam settings"
+                >
+                  <Shield className="mr-2 h-4 w-4" />
+                  <span className="text-xs">Spam</span>
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleMenuAction("modify-jito")}
+                  disabled={!isConnected}
+                  className="justify-start"
+                  title="MEV bundle settings"
+                >
+                  <Zap className="mr-2 h-4 w-4" />
+                  <span className="text-xs">Jito MEV</span>
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleMenuAction("modify-pools")}
+                  disabled={!isConnected}
+                  className="justify-start"
+                  title="DEX pool quantities"
+                >
+                  <GitBranch className="mr-2 h-4 w-4" />
+                  <span className="text-xs">Pools</span>
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleMenuAction("modify-base-mint")}
+                  disabled={!isConnected}
+                  className="justify-start"
+                  title="SOL/USDC base"
+                >
+                  <DollarSign className="mr-2 h-4 w-4" />
+                  <span className="text-xs">Base</span>
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleMenuAction("create-lookup-table")}
+                  disabled={!isConnected}
+                  className="justify-start"
+                  title="Create new LUT"
+                >
+                  <Database className="mr-2 h-4 w-4" />
+                  <span className="text-xs">New LUT</span>
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleMenuAction("modify-merge-mints")}
+                  disabled={!isConnected}
+                  className="justify-start"
+                  title="Multi-token trading"
+                >
+                  <GitBranch className="mr-2 h-4 w-4" />
+                  <span className="text-xs">Multi-Token</span>
+                </Button>
               </div>
             </CardContent>
           </Card>
@@ -490,7 +667,7 @@ export default function BotController() {
               <CardTitle>All Actions</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 {menuOptions.map((option) => {
                   const Icon = option.icon;
                   return (
@@ -499,10 +676,17 @@ export default function BotController() {
                       variant="outline"
                       onClick={() => handleMenuAction(option.action)}
                       disabled={!isConnected}
-                      className="justify-start"
+                      className="justify-start h-auto py-3 px-4"
                     >
-                      {Icon && <Icon className="mr-2 h-4 w-4" />}
-                      {option.label}
+                      <div className="flex items-start gap-3 w-full">
+                        {Icon && <Icon className="h-5 w-5 mt-0.5 flex-shrink-0" />}
+                        <div className="text-left">
+                          <div className="font-medium">{option.label}</div>
+                          <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                            {option.description}
+                          </div>
+                        </div>
+                      </div>
                     </Button>
                   );
                 })}

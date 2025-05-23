@@ -40,9 +40,9 @@ export default function ActionConsole({ output, currentAction, onClose, onClear 
         </div>
       </CardHeader>
       <CardContent>
-        <div className="bg-gray-900 text-gray-100 p-4 rounded-lg h-64 overflow-y-auto font-mono text-sm">
+        <div className="bg-gray-900 dark:bg-gray-950 text-gray-100 dark:text-gray-200 p-4 rounded-lg h-64 overflow-y-auto font-mono text-sm border border-gray-700 dark:border-gray-600">
           {output.length === 0 ? (
-            <div className="text-gray-500">Waiting for output...</div>
+            <div className="text-gray-500 dark:text-gray-400">Waiting for output...</div>
           ) : (
             <>
               {output.map((line, index) => (

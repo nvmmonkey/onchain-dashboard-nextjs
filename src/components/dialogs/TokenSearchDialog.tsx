@@ -87,18 +87,18 @@ export function TokenSearchDialog({ open, onClose, onSubmit }: TokenSearchDialog
             </div>
             
             {jitoEnabled && (
-              <RadioGroup value={jitoOption} onValueChange={setJitoOption}>
+              <RadioGroup value={jitoOption} onValueChange={setJitoOption} className="pl-4 border-l-2 border-gray-200 dark:border-gray-700">
                 <div className="flex items-center space-x-2">
                   <RadioGroupItem value="1" id="jito1" />
-                  <Label htmlFor="jito1">Random 3000-9000, count 1</Label>
+                  <Label htmlFor="jito1" className="text-sm">Random 3000-9000, count 1</Label>
                 </div>
                 <div className="flex items-center space-x-2">
                   <RadioGroupItem value="2" id="jito2" />
-                  <Label htmlFor="jito2">Random 5000-13000, count 1</Label>
+                  <Label htmlFor="jito2" className="text-sm">Random 5000-13000, count 1</Label>
                 </div>
                 <div className="flex items-center space-x-2">
                   <RadioGroupItem value="3" id="jito3" />
-                  <Label htmlFor="jito3">Random 9000-23000, count 1</Label>
+                  <Label htmlFor="jito3" className="text-sm">Random 9000-23000, count 1</Label>
                 </div>
               </RadioGroup>
             )}
@@ -115,14 +115,14 @@ export function TokenSearchDialog({ open, onClose, onSubmit }: TokenSearchDialog
             </div>
             
             {spamEnabled && (
-              <RadioGroup value={spamOption} onValueChange={setSpamOption}>
+              <RadioGroup value={spamOption} onValueChange={setSpamOption} className="pl-4 border-l-2 border-gray-200 dark:border-gray-700">
                 <div className="flex items-center space-x-2">
                   <RadioGroupItem value="1" id="spam1" />
-                  <Label htmlFor="spam1">Random 28311-488111</Label>
+                  <Label htmlFor="spam1" className="text-sm">Random 28311-488111</Label>
                 </div>
                 <div className="flex items-center space-x-2">
                   <RadioGroupItem value="2" id="spam2" />
-                  <Label htmlFor="spam2">Random 218311-588111</Label>
+                  <Label htmlFor="spam2" className="text-sm">Random 218311-588111</Label>
                 </div>
               </RadioGroup>
             )}
